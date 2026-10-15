@@ -65,6 +65,14 @@ Display multiple files at once
 bat src/*.rs
 ```
 
+Select lines and columns by appending a location to a file argument:
+
+```bash
+bat README.md:12-20:5-10
+```
+
+See [File Location and Range Syntax](doc/file-locations.md) for all supported forms and parsing rules.
+
 Read from stdin, determine the syntax automatically (note, highlighting will
 only work if the syntax can be determined from the first line of the file,
 usually through a shebang such as `#!/bin/sh`)

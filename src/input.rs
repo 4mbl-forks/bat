@@ -91,6 +91,7 @@ impl InputKind<'_> {
 pub(crate) struct InputMetadata {
     pub(crate) user_provided_name: Option<PathBuf>,
     pub(crate) size: Option<u64>,
+    pub(crate) location: Option<crate::location::Location>,
 }
 
 pub struct Input<'a> {
@@ -128,6 +129,10 @@ impl OpenedInput<'_> {
 }
 
 impl<'a> Input<'a> {
+    pub fn with_location(mut self, location: crate::location::Location) -> Self {
+        self.metadata.location = Some(location);
+        self
+    }
     pub fn ordinary_file(path: impl AsRef<Path>) -> Self {
         Self::_ordinary_file(path.as_ref())
     }

@@ -50,6 +50,30 @@ fn basic() {
 }
 
 #[test]
+fn file_locations_select_lines_and_columns_per_input() {
+    let dir = tempdir().unwrap();
+    let first = dir.path().join("first:part.txt");
+    let second = dir.path().join("second.txt");
+    std::fs::write(&first, "alpha\nbéta\ngamma\n").unwrap();
+    std::fs::write(&second, "one\ntwo\nthree\n").unwrap();
+
+    bat()
+        .arg(format!("{}:2:2-3", first.display()))
+        .arg(format!("{}:-2", second.display()))
+        .assert()
+        .success()
+        .stdout("ét\none\ntwo\n");
+
+    let complete = dir.path().join("second.txt:2");
+    std::fs::write(&complete, "whole file\n").unwrap();
+    bat()
+        .arg(&complete)
+        .assert()
+        .success()
+        .stdout("whole file\n");
+}
+
+#[test]
 fn stdin() {
     bat()
         .write_stdin("foo\nbar\n")

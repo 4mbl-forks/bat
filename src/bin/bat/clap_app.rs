@@ -42,7 +42,10 @@ pub fn build_app(interactive_output: bool) -> Command {
                 .help("File(s) to print / concatenate. Use '-' for standard input.")
                 .long_help(
                     "File(s) to print / concatenate. Use a dash ('-') or no argument at all \
-                     to read from standard input.",
+                     to read from standard input. Append :LINE, :LINE-LINE, :LINE:COLUMN, \
+                     or ::COLUMN to select a location. Omit a range endpoint to select through \
+                     the beginning or end. An existing file matching the complete argument \
+                     always takes precedence.",
                 )
                 .num_args(1..)
                 .value_parser(value_parser!(PathBuf)),

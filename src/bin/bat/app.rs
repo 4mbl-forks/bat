@@ -24,6 +24,7 @@ use bat::{
     error::*,
     input::Input,
     line_range::{HighlightedLineRanges, LineRange, LineRanges},
+    location::parse_path,
     style::{StyleComponent, StyleComponents},
     MappingTarget, NonprintableNotation, PagingMode, SyntaxMapping, WrappingMode,
 };
@@ -576,7 +577,12 @@ impl App {
                 if filepath.to_str().unwrap_or_default() == "-" {
                     file_input.push(new_stdin_input(provided_name));
                 } else {
-                    file_input.push(new_file_input(filepath, provided_name));
+                    if let Some((path, location)) = parse_path(filepath) {
+                        file_input
+                            .push(new_file_input(&path, provided_name).with_location(location));
+                    } else {
+                        file_input.push(new_file_input(filepath, provided_name));
+                    }
                 }
             }
         }

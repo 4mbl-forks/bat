@@ -242,7 +242,13 @@ impl Controller<'_> {
                 }
             };
 
-            self.print_file_ranges(printer, writer, &mut input.reader, &line_ranges)?;
+            self.print_file_ranges(
+                printer,
+                writer,
+                &mut input.reader,
+                &line_ranges,
+                input.metadata.location,
+            )?;
         }
         printer.print_footer(writer, input)?;
 
@@ -255,6 +261,7 @@ impl Controller<'_> {
         writer: &mut OutputHandle,
         reader: &mut InputReader,
         line_ranges: &LineRanges,
+        location: Option<crate::location::Location>,
     ) -> Result<()> {
         let mut current_line_buffer: Vec<u8> = Vec::new();
         let mut current_line_number: usize = 1;
@@ -319,7 +326,13 @@ impl Controller<'_> {
                 })
                 .unwrap_or(MaxBufferedLineNumber::Final(line_nr));
 
-            match line_ranges.check(line_nr, max_buffered_line_number) {
+            let selected =
+                location.is_none_or(|loc| line_nr >= loc.lines.start && line_nr <= loc.lines.end);
+            match if selected {
+                line_ranges.check(line_nr, max_buffered_line_number)
+            } else {
+                RangeCheckResult::BeforeOrBetweenRanges
+            } {
                 RangeCheckResult::BeforeOrBetweenRanges => {
                     // Call the printer in case we need to call the syntax highlighter
                     // for this line. However, set `out_of_range` to `true`.
@@ -338,7 +351,26 @@ impl Controller<'_> {
                         }
                     }
 
-                    printer.print_line(false, writer, line_nr, &line, max_buffered_line_number)?;
+                    if let Some(loc) = location
+                        .filter(|loc| loc.columns.start != 1 || loc.columns.end != usize::MAX)
+                    {
+                        let clipped = clip_columns(&line, loc.columns);
+                        printer.print_line(
+                            false,
+                            writer,
+                            line_nr,
+                            &clipped,
+                            max_buffered_line_number,
+                        )?;
+                    } else {
+                        printer.print_line(
+                            false,
+                            writer,
+                            line_nr,
+                            &line,
+                            max_buffered_line_number,
+                        )?;
+                    }
                     if self.config.unbuffered {
                         writer.flush()?;
                     }
@@ -349,5 +381,36 @@ impl Controller<'_> {
             }
         }
         Ok(())
+    }
+}
+
+fn clip_columns(line: &[u8], columns: crate::location::Span) -> Vec<u8> {
+    let end = line
+        .iter()
+        .position(|&b| b == b'\r' || b == b'\n')
+        .unwrap_or(line.len());
+    let content = String::from_utf8_lossy(&line[..end]);
+    let mut result: String = content
+        .chars()
+        .enumerate()
+        .filter(|(i, _)| i + 1 >= columns.start && i + 1 <= columns.end)
+        .map(|(_, c)| c)
+        .collect();
+    result.push_str(&String::from_utf8_lossy(&line[end..]));
+    result.into_bytes()
+}
+
+#[cfg(test)]
+mod location_tests {
+    use super::*;
+
+    #[test]
+    fn clips_unicode_columns_and_keeps_line_ending() {
+        let span = crate::location::Span { start: 2, end: 3 };
+        assert_eq!(
+            clip_columns("aé中d\r\n".as_bytes(), span),
+            "é中\r\n".as_bytes()
+        );
+        assert_eq!(clip_columns(b"a\n", span), b"\n");
     }
 }

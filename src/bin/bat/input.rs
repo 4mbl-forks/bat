@@ -1,7 +1,7 @@
 use bat::input::Input;
 use std::path::Path;
 
-pub fn new_file_input<'a>(file: &'a Path, name: Option<&'a Path>) -> Input<'a> {
+pub fn new_file_input<'a>(file: &Path, name: Option<&Path>) -> Input<'a> {
     named(Input::ordinary_file(file), name.or(Some(file)))
 }
 
